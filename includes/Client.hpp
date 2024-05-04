@@ -7,9 +7,9 @@ class Client
 {
 	public:
 		Client();
-		Client(const Client &other);
+		// Client(const Client &other);
 		~Client();
-		Client &operator=(const Client &other);
+		// Client &operator=(const Client &other);
 
 		int			getFd();
 		void		setFd(int fd);

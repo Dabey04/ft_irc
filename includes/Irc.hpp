@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <csignal>
+#include <cstring>
 #include <string>
+#include <vector>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <exception>
@@ -11,7 +13,10 @@
 #include <limits.h>
 #include <unistd.h>
 #include <cstdlib> //pour atoi()
-#include "server.hpp"
+#include <poll.h>
+
+#include "Server.hpp"
+#include "Client.hpp"
 
 /* +++ COLORS +++ */
 #define REINIT "\033[0m"

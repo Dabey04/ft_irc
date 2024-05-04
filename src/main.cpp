@@ -1,4 +1,4 @@
-#include "include/irc.hpp"
+#include "../includes/Irc.hpp"
 
 bool _state = true;
 
@@ -15,8 +15,8 @@ int main(int ac, char **av)
 	{
 		if (ac == 3)
 		{
-			Server Serv(av[1], av[2]);
-			Serv.Run();
+			Server Serv;
+			Serv.initServer(av[1], av[2]);
 		}
 		else
 			throw std::invalid_argument("The ircserv needs port and password for get ready");

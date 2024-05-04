@@ -9,6 +9,10 @@ Client::~Client()
 {
 }
 
+// Client &Client::operator=(const Client &other)
+// {
+// }
+
 int	Client::getFd()
 {
 	return (this->_fd);
