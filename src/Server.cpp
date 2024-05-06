@@ -8,9 +8,14 @@ Server::Server()
 	// std::cout << VERT << "Default constructor are called" << REINIT << std::endl;
 }
 
+// Server::Server(const Server &other)
+// {
+
+// }
+
 Server::~Server()
 {
-	_state = false;
+	// _state = false;
 	std::cout << ROUGE << "ircserv off" << REINIT << std::endl;
 }
 
@@ -47,7 +52,8 @@ void		Server::signalHandler(int signum)
 	std::cout << std::endl << "Signal received !" << std::endl;
 	Server::Signal = true;
 }
-void			Server::CloseFds()
+
+void			Server::closeFds()
 {
 	for (size_t i = 0; i < _clients.size(); i++)
 	{
@@ -61,54 +67,77 @@ void			Server::CloseFds()
 	}
 }
 
-void	Server::initServer(const char *port, const char *pass)
-{
-	(void)port;
-	(void)pass;
-
-	// this->_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-	// if (this->_socket_fd == -1)
-	// 	throw std::runtime_error("(SERVER) echec d'initialisation du socket");
-
-	// this->_socket_add.sin_family = AF_INET;
-	// this->_socket_add.sin_port = htons(this->_port);
-	// this->_socket_add.sin_addr.s_addr = INADDR_ANY;
-
-	// // configuration et liaisons
-	// int	socketAdresslenght = sizeof(this->_socket_add);
-	// int	bind_adress = bind(this->_socket_fd, (struct sockaddr*) &this->_socket_add, socketAdresslenght);
-
-	// if (bind_adress == -1)
-	// 	throw std::runtime_error("(SERVER) echec de liaison au socket");
-	// if (listen(this->_socket_fd, PENDING_QUEUE_MAXLENGTH) == -1)
-	// 	throw std::runtime_error("(SERVER) echec de l'ecoute des connexion entrante\n");
-	// std::cout << VERT << "ircserv on" << REINIT << std::endl;
-}
-
 void			Server::creatSocket()
 {
-	// struct pollfd newPoll;
+	struct pollfd newPoll;
 
-
-	this->_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (this->_socket_fd == -1)
-		throw std::runtime_error("(SERVER) echec d'initialisation du socket");
-
-	this->_socket_add.sin_family = AF_INET;
-	this->_socket_add.sin_port = htons(this->_port);
+	this->_socket_add.sin_family = AF_INET;//definir la famille d'adresse ipv4
+	this->_socket_add.sin_port = htons(this->_port);//convertit un u_short(port) de l’hôte en ordre d’octet réseau TCP/IP
 	this->_socket_add.sin_addr.s_addr = INADDR_ANY;
 
+	this->_socket_fd = socket(AF_INET, SOCK_STREAM, 0);//creation du socket server
+
+	if (this->_socket_fd == -1)
+		throw std::runtime_error("(SERVER) failed to create socket");
+
+	int en = 1;// la valeur de SO_REUSEADDR de setsocket()
+	if (setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
+		throw std::runtime_error("(SERVER) failed to set option on socket");
+	if (fcntl(_socket_fd, F_SETFL, O_NONBLOCK) == -1)// definir l'option NonBlaquant pour les sockets
+		throw std::runtime_error("(SERVER) failed to set option (O_NONBLOCK) on socket");
+	
 	// configuration et liaisons
 	int	socketAdresslenght = sizeof(this->_socket_add);
 	int	bind_adress = bind(this->_socket_fd, (struct sockaddr*) &this->_socket_add, socketAdresslenght);
 
 	if (bind_adress == -1)
-		throw std::runtime_error("(SERVER) echec de liaison au socket");
+		throw std::runtime_error("(SERVER) failed to bind socket");
 	if (listen(this->_socket_fd, PENDING_QUEUE_MAXLENGTH) == -1)
-		throw std::runtime_error("(SERVER) echec de l'ecoute des connexion entrante\n");
-	std::cout << VERT << "ircserv on" << REINIT << std::endl;
+		throw std::runtime_error("(SERVER) failed to listen");
+
+	newPoll.fd = _socket_fd;// ajouter le socket du server au pollfd
+	newPoll.events = POLLIN;//evenements attendus (entree)
+	newPoll.revents = 0;//evenements detectes (sortie)
+
+	_fds.push_back(newPoll);// ajouter le socket du server au pollfd 
+}
+
+void	Server::newClient()
+{
+
+}
+
+void	Server::mewDataClient(int fd)
+{
+	(void)fd;
+}
+
+void	Server::initServer(const char *port, const char *pass)
+{
+	this->_port = atol(port);
+	(void)pass;// comment configurer le mot de passe ??
+
+	creatSocket();//creation du socket server
+
+	std::cout << VERT << "Server <" << _socket_fd << "> connected" << REINIT << std::endl;
+	std::cout << "Waiting to accept a connection..." << std::endl;
+	while (Server::Signal == false)// le serveur est en marche si pas de signal
+	{
+		if ((poll(&_fds[0], _fds.size(), -1) == -1) && Server::Signal == false)// surveille si y a un fd qui est pret a etre lu
+			throw std::runtime_error("(SERVER) poll() failed");
+
+		for (size_t i = 0; i < _fds.size(); i++)//verifier tout les files descripteurs
+		{
+			if (_fds[i].revents & POLLIN)
+			{
+				if (_fds[i].fd ==  _socket_fd)
+					newClient();//accepter un client
+				else
+					mewDataClient(_fds[i].fd);//recevoir une data du client
+			}
+		}	
+	}
+	closeFds();//close tout les fds a l'arret du server
 }
 
 void Server::securArg(const char *port, const char *pass)

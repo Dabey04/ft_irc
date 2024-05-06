@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <cstdlib> //pour atoi()
 #include <poll.h>
+  #include <fcntl.h>//pour fnctl()
 
 #include "Server.hpp"
 #include "Client.hpp"

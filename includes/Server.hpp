@@ -13,10 +13,10 @@ class Server
 
 		Server();
 		Server(char *port, char *pass);
-		Server(const Server &other);
+		// Server(const Server &other);
 		~Server();
 
-		Server &operator=(const Server &other);
+		// Server &operator=(const Server &other);
 
 		void	Run();
 
@@ -26,7 +26,7 @@ class Server
 		void			mewDataClient(int fd);
 		static void		signalHandler(int signum);
 
-		void			CloseFds();
+		void			closeFds();
 		void			clearClient(int fd);
 
 		void			securArg(const char *port, const char *pass);
