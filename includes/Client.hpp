@@ -18,6 +18,7 @@ class Client
 	private:
 		int					_fd;
 		std::string			_ip_add;
+		// struct sockaddr_in	_cliaddr;
 };
 
 #endif

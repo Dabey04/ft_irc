@@ -12,25 +12,22 @@ class Server
 		static bool	Signal;//variable static
 
 		Server();
-		Server(char *port, char *pass);
 		// Server(const Server &other);
 		~Server();
 
 		// Server &operator=(const Server &other);
 
-		void	Run();
+		// void			Run();
 
-		void			initServer(const char *port, const char *pass);
+		void			securArg(const char *port, const char *pass);
 		void			creatSocket();
+		void			initServer(char *port, char *pass);
 		void			newClient();
 		void			mewDataClient(int fd);
 		static void		signalHandler(int signum);
 
 		void			closeFds();
 		void			clearClient(int fd);
-
-		void			securArg(const char *port, const char *pass);
-
 
 	private:
 		int							_port;//

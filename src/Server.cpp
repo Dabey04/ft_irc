@@ -19,11 +19,6 @@ Server::~Server()
 	std::cout << ROUGE << "ircserv off" << REINIT << std::endl;
 }
 
-Server::Server(char *port, char *pass)
-{
-	securArg(port, pass);//check error port and pass
-}
-
 void	Server::clearClient(int fd)
 {
 	//supprimer le client du vecteur des fds
@@ -74,6 +69,7 @@ void			Server::creatSocket()
 	this->_socket_add.sin_family = AF_INET;//definir la famille d'adresse ipv4
 	this->_socket_add.sin_port = htons(this->_port);//convertit un u_short(port) de l’hôte en ordre d’octet réseau TCP/IP
 	this->_socket_add.sin_addr.s_addr = INADDR_ANY;
+	// this->_socket_add.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	this->_socket_fd = socket(AF_INET, SOCK_STREAM, 0);//creation du socket server
 
@@ -104,23 +100,65 @@ void			Server::creatSocket()
 
 void	Server::newClient()
 {
+	Client				client;
+	struct pollfd		newPoll;
+	struct sockaddr_in	cliaddr;
+	socklen_t			sock_len = sizeof(cliaddr);
 
+	int	connectSockFD = accept(_socket_fd, (struct sockaddr*) &cliaddr,
+	(socklen_t *) &sock_len);
+
+	if (connectSockFD == -1)
+	{
+		std::cout << "(SERVEUR) accept() failed" << std::endl;
+		return ;
+	}
+	if (fcntl(connectSockFD, F_SETFL, O_NONBLOCK) == -1)// definir l'option NonBlaquant pour le socket
+	{
+		std::cout << ("(SERVER) fcntl()failed") << std::endl;
+		return ;
+	}
+	newPoll.fd = connectSockFD;// ajouter le socket du client au pollfd
+	newPoll.events = POLLIN;//evenements attendus (entree / lecture)
+	newPoll.revents = 0;//evenements detectes (sortie)
+
+	client.setFd(connectSockFD);//set le fd au client
+	client.setIpAdd(inet_ntoa(cliaddr.sin_addr));// convertire l'addr ip en string
+	_clients.push_back(client);// ajouter le client au vecteur des clients 
+	_fds.push_back(newPoll);// ajouter le socket du client au pollfd
+
+	std::cout << VERT << "Client Connected" << REINIT << std::endl;
 }
 
 void	Server::mewDataClient(int fd)
 {
-	(void)fd;
+	char buffer[BUFFER_SIZE];//buffer pour recevoir la data
+
+	memset(buffer, 0, BUFFER_SIZE);
+	int	recevBytes = recv(fd, buffer, (BUFFER_SIZE - 1), 0);//recevoir la data
+		
+	if (recevBytes <= 0)// si le client est deconnecte ou y a une erreur
+	{
+		std::cout << "(SERVEUR) Failure to receive message from the client" << std::endl;
+		clearClient(fd);//supprimer le client
+		close(fd);//close le fd du client
+	}
+	else
+	{
+		buffer[recevBytes] = '\0';
+		std::cout << "Client <" << fd << "> Data: " << buffer << std::endl;
+		//ajouter le traitement de la data : Parsing, Commande, execution...
+	}
 }
 
-void	Server::initServer(const char *port, const char *pass)
+void	Server::initServer(char *port, char *pass)
 {
-	this->_port = atol(port);
-	(void)pass;// comment configurer le mot de passe ??
-
+	securArg(port, pass);//check error port and pass
 	creatSocket();//creation du socket server
 
 	std::cout << VERT << "Server <" << _socket_fd << "> connected" << REINIT << std::endl;
 	std::cout << "Waiting to accept a connection..." << std::endl;
+	
 	while (Server::Signal == false)// le serveur est en marche si pas de signal
 	{
 		if ((poll(&_fds[0], _fds.size(), -1) == -1) && Server::Signal == false)// surveille si y a un fd qui est pret a etre lu
@@ -165,43 +203,3 @@ void Server::securArg(const char *port, const char *pass)
 	this->_port = tmp;
 	this->_pass = sPass;
 }
-
-
-void Server::Run()
-{
-	// initServer();
-	socklen_t	addrlen = sizeof(this->_socket_add);
-	int			connectedSockFd = accept(this->_socket_fd, (struct sockaddr*) &this->_socket_add, (socklen_t *) &addrlen);
-	
-	if (connectedSockFd == -1)
-		throw std::runtime_error("(SERVER) Echec d'etablissement de la conexion");
-	std::cout << VERT << "SERVEUR CONNECTED AU CLIENT IRSSI" << REINIT << std::endl;
-	// while (_state)
-	// {
-		//reception d'un message
-		char	buffer[BUFFER_SIZE] = {0};
-		int	receivedBytes = recv(connectedSockFd, buffer, BUFFER_SIZE, 0);
-		
-		if (receivedBytes == -1)
-		{
-			std::cout << "(SERVEUR) echec de reception du message du client" << std::endl;
-			exit(1);	
-		}
-		std::cout << "Client : " <<  buffer << std::endl;
-
-		//envoie de message pour le test
-		const char message []  = "Bonjour client, je suis le serveur.";
-		int	sentBytes = send(connectedSockFd, (message), strlen(message) , 0);
-
-		if (sentBytes == -1)
-		{
-			std::cout << "(SERVEUR) echec d'envoie du message" << std::endl;
-			exit(1);	
-		}
-		//fermeture des sockets et liberations 
-		close(connectedSockFd);
-		close(this->_socket_fd);
-	// }
-}
-
-

@@ -11,7 +11,7 @@
 int main(int ac, char **av)
 {
 	Server serv;
-	std::cout << " *-*-*- SERVER -*-*-* " << std::endl;
+	// std::cout << " *-*-*- SERVER -*-*-* " << std::endl;
 	try
 	{
 		signal(SIGINT, Server::signalHandler);//catch (Ctrl + C)
